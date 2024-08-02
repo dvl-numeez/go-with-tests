@@ -8,8 +8,6 @@ const(
 	spanish = "Spanish"
 	french = "French"
 	frenchHelloPrefix = "Bonjour "
-
-
 )
 
 func Hello(name,language string)string{
