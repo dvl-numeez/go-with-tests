@@ -17,23 +17,19 @@ func TestPermieter(t *testing.T){
 
 
 func TestArea(t *testing.T){
-	t.Run("Rectangles",func(t *testing.T){
-		rectangle:= Rectangle{
-			Width: 12.0,
-			Height: 6.0,
+	areaTests:=[]struct{
+		shape Shape
+		want float64
+	}{
+		{Rectangle{12,6},72.0},
+		{Circle{10}, 314.1592653589793},
+		{Triangle{12, 6}, 36.0},
+	}
+	for _,tests:= range areaTests{
+		got:=tests.shape.Area()
+		expected:=tests.want
+		if got!=expected{
+			t.Errorf("Got : %.2f Wanted : %.2f",got,expected)
 		}
-		actual:=rectangle.Area()
-		wanted:=72.0
-		if actual!=wanted{
-			t.Errorf("Actual %.2f Expected %.2f",actual,wanted)
-		}
-	})
-	t.Run("Circles",func(t *testing.T){
-		circle:=Circle{10}
-		actual:=circle.Area()
-		wanted:=314.1592653589793
-		if actual!=wanted{
-			t.Errorf("Actual g %g expected %g",actual,wanted)
-		}
-	})
+	}
 }
