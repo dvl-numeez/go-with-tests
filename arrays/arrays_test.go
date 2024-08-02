@@ -1,6 +1,9 @@
 package arrays
 
-import "testing"
+import (
+	"reflect"
+	"testing"
+)
 
 func TestSum(t *testing.T){
 	t.Run("Collection of 5 numbers",func(t *testing.T){
@@ -21,4 +24,29 @@ func TestSum(t *testing.T){
 		})
 	
 	
+}
+
+func TestSumAll(t *testing.T){
+	got:=SumAll([]int{1,2},[]int{0,9})
+	want:=[]int{3,9}
+	if  ! reflect.DeepEqual(got,want){
+		t.Errorf("got : %v want : %v",got,want)
+	}
+}
+
+func TestSumAllTails(t *testing.T){
+	got:=SumAllTail([]int{1,2},[]int{0,9})
+	expected:=[]int{2,9}
+	if  ! reflect.DeepEqual(got,expected){
+		t.Errorf("got : %v want : %v",got,expected)
+	}
+
+	t.Run("entering empty slices also",func(t *testing.T){
+		got:=SumAllTail([]int{},[]int{0,9})
+	expected:=[]int{0,9}
+	if  ! reflect.DeepEqual(got,expected){
+		t.Errorf("got : %v want : %v",got,expected)
+	}
+	})
+
 }
