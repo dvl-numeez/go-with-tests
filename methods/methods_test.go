@@ -28,4 +28,12 @@ func TestArea(t *testing.T){
 			t.Errorf("Actual %.2f Expected %.2f",actual,wanted)
 		}
 	})
+	t.Run("Circles",func(t *testing.T){
+		circle:=Circle{10}
+		actual:=circle.Area()
+		wanted:=314.1592653589793
+		if actual!=wanted{
+			t.Errorf("Actual g %g expected %g",actual,wanted)
+		}
+	})
 }
