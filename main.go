@@ -1,18 +1,17 @@
 package main
 
 import (
-	"log"
-	"net/http"
-
-	di "github.com/dvl-numeez/go-with-tests/DI"
+	"fmt"
+	"io"
+	"os"
 )
 
 
-func MyGreeterHandler(w http.ResponseWriter, r *http.Request) {
-	di.Greet(w, "world")
+
+func Countdown(out io.Writer) {
+	fmt.Fprint(out, "3")
 }
 
-
 func main(){
-	log.Fatal(http.ListenAndServe(":5001", http.HandlerFunc(MyGreeterHandler)))
+	Countdown(os.Stdout)
 }
