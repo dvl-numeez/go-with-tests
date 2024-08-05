@@ -1,6 +1,9 @@
 package sync
 
-import "testing"
+import (
+	"sync"
+	"testing"
+)
 
 
 func TestCount(t *testing.T){
@@ -10,6 +13,21 @@ func TestCount(t *testing.T){
 		counter.Inc()
 		counter.Inc()
 		assertCount(t,&counter,3)
+	})
+	t.Run("Check whether it concurrency safe",func(t *testing.T){
+		wantedCount:=1000
+		counter:=Counter{}
+		var wg sync.WaitGroup
+		wg.Add(wantedCount)
+		for i:=0;i<1000;i++{
+			go func ()  {
+				counter.Inc()	
+				wg.Done()
+			}()
+		}
+		wg.Wait()
+
+		assertCount(t,&counter,wantedCount)
 	})
 }
 
