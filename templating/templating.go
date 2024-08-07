@@ -1,39 +1,65 @@
 package templating
 
 import (
-	"fmt"
+	"embed"
+	
+	"html/template"
 	"io"
+	"strings"
+	"github.com/gomarkdown/markdown"
+	"github.com/gomarkdown/markdown/parser"
+	
 )
 
 
-
+var (
+	//go:embed "templates/*"
+	postTemplates embed.FS
+)
 type Post struct{
 	Title, Description, Body string
 	Tags                     []string
 
 }
+type PostViewModel struct {
+	Title, SanitisedTitle, Description, Body string
+	Tags                                     []string
+}
 
-func Render(writer io.Writer,post Post)error{
-	_,err:=fmt.Fprintf(writer,"<h1>%s</h1><p>%s</p>",post.Title,post.Description)
+type PostRenderer struct {
+	templ *template.Template
+	mdParser *parser.Parser
+}
+
+func NewPostRenderer() (*PostRenderer, error) {
+	templ, err := template.ParseFS(postTemplates, "templates/*.gohtml")
 	if err != nil {
-		return err
-	}
-	_, err = fmt.Fprint(writer, "Tags: <ul>")
-	if err != nil {
-		return err
+		return nil, err
 	}
 
-	for _, tag := range post.Tags {
-		_, err = fmt.Fprintf(writer, "<li>%s</li>", tag)
-		if err != nil {
-			return err
-		}
-	}
+	return &PostRenderer{templ: templ}, nil
+}
 
-	_, err = fmt.Fprint(writer, "</ul>")
-	if err != nil {
-		return err
-	}
+func (p Post)SanitisedTitle()string{
+	return strings.ToLower(strings.Replace(p.Title, " ", "-", -1))
+}
 
-	return nil
+func (r *PostRenderer) Render(w io.Writer, p Post) error {
+
+	return  r.templ.ExecuteTemplate(w, "blog.gohtml", p)
+}
+
+func (r *PostRenderer) RenderIndex(w io.Writer,posts []Post)error{
+	return r.templ.ExecuteTemplate(w, "index.gohtml", posts)
+}
+
+type postViewModel struct {
+	Post
+	HTMLBody template.HTML
+}
+
+func newPostVM(p Post, r *PostRenderer) postViewModel {
+	vm := postViewModel{Post: p}
+	vm.HTMLBody = template.HTML(markdown.ToHTML([]byte(p.Body), r.mdParser, nil))
+	return vm
 }
