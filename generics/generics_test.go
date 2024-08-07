@@ -9,9 +9,13 @@ func TestAssertFunctions(t *testing.T){
 		AssertEqual(t,1,1)
 		AssertNotEqual(t,1,2)
 	})
+	t.Run("assert on strings",func(t *testing.T){
+		AssertEqual(t, "hello", "hello")
+	AssertNotEqual(t, "hello", "Numeez")
+	})
 }
 
-func AssertEqual(t *testing.T,got,want int){
+func AssertEqual[T comparable](t *testing.T,got,want T){
 	t.Helper()
 	if got != want {
 		t.Errorf("got %d, want %d", got, want)
@@ -19,7 +23,7 @@ func AssertEqual(t *testing.T,got,want int){
 }
 
 
-func AssertNotEqual(t *testing.T,got,want int){
+func AssertNotEqual[T comparable](t *testing.T,got,want T){
 	t.Helper()
 	if got == want {
 		t.Errorf("didn't want %d", got)
