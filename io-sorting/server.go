@@ -1,4 +1,4 @@
-package server
+package iosorting
 
 import (
 	"encoding/json"
@@ -19,7 +19,7 @@ type Player struct{
 type PlayerStore interface{
 	GetPlayerScore(name string)int
 	RecordWin(name string)
-	GetLeague() []Player
+	GetLeague() League
 }
 type PlayerServer struct{
 	Store PlayerStore
@@ -33,13 +33,33 @@ type StubPlayerStore struct{
 }
 
 type FileSystemPlayerStore struct{
-	database io.ReadSeeker
+	database io.ReadWriteSeeker
+	
 }
 
-func(s *FileSystemPlayerStore)GetLeague() []Player{
+func(s *FileSystemPlayerStore)GetLeague() League{
 	s.database.Seek(0,io.SeekStart)
 	player,_:=NewLeague(s.database)
 	return player
+}
+
+func(s *FileSystemPlayerStore)GetPlayerScore(name string)int{
+	league:=s.GetLeague().Find(name)
+	if league != nil {
+		return league.Wins
+	}
+
+	return 0
+}
+func(s *FileSystemPlayerStore)RecordWin(name string){
+	league:= s.GetLeague()
+	player:=league.Find(name)
+	if player != nil {
+		player.Wins++
+	}
+	s.database.Seek(0, io.SeekStart)
+	json.NewEncoder(s.database).Encode(league)
+
 }
 
 func(store *StubPlayerStore)GetLeague()[]Player{

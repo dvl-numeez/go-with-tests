@@ -1,13 +1,15 @@
-package server
+package iosorting
 
 import (
+
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"reflect"
-	"strings"
+	
 	"testing"
 )
 
@@ -15,9 +17,10 @@ import (
 func TestFileSystemStore(t *testing.T) {
 
 	t.Run("league from a reader", func(t *testing.T) {
-		database := strings.NewReader(`[
+		database, cleanDatabase := createTempFile(t, `[
 			{"Name": "Cleo", "Wins": 10},
 			{"Name": "Chris", "Wins": 33}]`)
+		defer cleanDatabase()
 
 		store := FileSystemPlayerStore{database}
 
@@ -30,6 +33,34 @@ func TestFileSystemStore(t *testing.T) {
 		got = store.GetLeague()
 		assertLeague(t, got, want)
 		assertLeague(t, got, want)
+	})
+	t.Run("get player score", func(t *testing.T) {
+		database, cleanDatabase := createTempFile(t, `[
+			{"Name": "Cleo", "Wins": 10},
+			{"Name": "Chris", "Wins": 33}]`)
+		defer cleanDatabase()
+
+		store := FileSystemPlayerStore{database}
+	
+		got := store.GetPlayerScore("Chris")
+	
+		want := 33
+	
+		assertScoreEqual(t,got,want)
+	})
+	t.Run("store wins for existing players", func(t *testing.T) {
+		database, cleanDatabase := createTempFile(t, `[
+			{"Name": "Cleo", "Wins": 10},
+			{"Name": "Chris", "Wins": 33}]`)
+		defer cleanDatabase()
+	
+		store := FileSystemPlayerStore{database}
+	
+		store.RecordWin("Chris")
+	
+		got := store.GetPlayerScore("Chris")
+		want := 34
+		assertScoreEqual(t, got, want)
 	})
 }
 
@@ -87,4 +118,25 @@ func assertContentType(t testing.TB, response *httptest.ResponseRecorder, want s
 	if response.Result().Header.Get("content-type") != want {
 		t.Errorf("response did not have content-type of %s, got %v", want, response.Result().Header)
 	}
+}
+
+func assertScoreEqual(t testing.TB,got ,want int){
+	t.Helper()
+	if got!=want{
+		t.Errorf("Actual : %d , Expected : %d",got ,want)
+	}
+}
+
+func createTempFile(t testing.TB,initialDataString string)(io.ReadWriteSeeker,func()){
+	t.Helper()
+	tmpFile,err:=os.CreateTemp("","db")
+	if err != nil {
+		t.Fatalf("could not create temp file %v", err)
+	}
+	tmpFile.Write([]byte(initialDataString))
+	removeFile:=func(){
+		tmpFile.Close()
+		os.Remove(tmpFile.Name())
+	}
+	return tmpFile,removeFile
 }

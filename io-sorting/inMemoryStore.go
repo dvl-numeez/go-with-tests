@@ -1,4 +1,4 @@
-package server
+package iosorting
 
 func NewInMemoryPlayerStore() *InMemoryPlayerStore {
 	return &InMemoryPlayerStore{map[string]int{}}
