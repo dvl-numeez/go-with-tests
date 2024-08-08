@@ -33,13 +33,13 @@ type StubPlayerStore struct{
 }
 
 type FileSystemPlayerStore struct{
-	database io.ReadWriteSeeker
+	Database io.ReadWriteSeeker
 	
 }
 
 func(s *FileSystemPlayerStore)GetLeague() League{
-	s.database.Seek(0,io.SeekStart)
-	player,_:=NewLeague(s.database)
+	s.Database.Seek(0,io.SeekStart)
+	player,_:=NewLeague(s.Database)
 	return player
 }
 
@@ -56,9 +56,11 @@ func(s *FileSystemPlayerStore)RecordWin(name string){
 	player:=league.Find(name)
 	if player != nil {
 		player.Wins++
+	}else{
+		league = append(league, Player{name, 1})
 	}
-	s.database.Seek(0, io.SeekStart)
-	json.NewEncoder(s.database).Encode(league)
+	s.Database.Seek(0, io.SeekStart)
+	json.NewEncoder(s.Database).Encode(league)
 
 }
 
