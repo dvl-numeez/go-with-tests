@@ -24,7 +24,10 @@ func NewCLI(store PlayerStore, in io.Reader) *CLI {
 		in:          bufio.NewScanner(in),
 	}
 }
-
+func (cli *CLI) readLine() string {
+	cli.in.Scan()
+	return cli.in.Text()
+}
 func extractWinner(userInput string) string {
 	return strings.Replace(userInput, " wins", "", 1)
 }
