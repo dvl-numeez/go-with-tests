@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"sort"
 	"strings"
-
 )
 
 const jsonContentType = "application/json"
@@ -33,34 +34,36 @@ type StubPlayerStore struct{
 }
 
 type FileSystemPlayerStore struct{
-	Database io.ReadWriteSeeker
+	Database *json.Encoder
+	league League
 	
 }
 
-func(s *FileSystemPlayerStore)GetLeague() League{
-	s.Database.Seek(0,io.SeekStart)
-	player,_:=NewLeague(s.Database)
-	return player
+func(s *FileSystemPlayerStore)GetLeague()League{
+	sort.Slice(s.league,func(i,j int)bool{
+		return s.league[i].Wins > s.league[j].Wins
+	})
+	return s.league
 }
-
 func(s *FileSystemPlayerStore)GetPlayerScore(name string)int{
-	league:=s.GetLeague().Find(name)
+	league:=s.league.Find(name)
 	if league != nil {
 		return league.Wins
 	}
 
 	return 0
 }
+
 func(s *FileSystemPlayerStore)RecordWin(name string){
-	league:= s.GetLeague()
-	player:=league.Find(name)
+	player := s.league.Find(name)
+
 	if player != nil {
 		player.Wins++
-	}else{
-		league = append(league, Player{name, 1})
+	} else {
+		s.league = append(s.league, Player{name, 1})
 	}
-	s.Database.Seek(0, io.SeekStart)
-	json.NewEncoder(s.Database).Encode(league)
+
+	s.Database.Encode(s.league)
 
 }
 
@@ -73,6 +76,39 @@ func(store *StubPlayerStore)GetPlayerScore(name string)int{
 }
 func (store *StubPlayerStore)RecordWin(name string){
 	store.winCalls = append(store.winCalls, name)
+}
+func NewFileSystemStore(file *os.File)(*FileSystemPlayerStore,error){
+	err := initialisePlayerDBFile(file)
+	if err != nil {
+		return nil, fmt.Errorf("problem initialising player db file, %v", err)
+	}
+	league, err := NewLeague(file)
+	if err != nil {
+		return nil, fmt.Errorf("problem loading player store from file %s, %v", file.Name(), err)
+	}
+
+
+	return & FileSystemPlayerStore{
+		Database:json.NewEncoder(&Tape{file}),
+		league: league,
+	},nil
+}
+
+func initialisePlayerDBFile(file *os.File) error {
+	file.Seek(0, io.SeekStart)
+
+	info, err := file.Stat()
+
+	if err != nil {
+		return fmt.Errorf("problem getting file info from file %s, %v", file.Name(), err)
+	}
+
+	if info.Size() == 0 {
+		file.Write([]byte("[]"))
+		file.Seek(0, io.SeekStart)
+	}
+
+	return nil
 }
 
 func NewPlayerServer(store PlayerStore)*PlayerServer{
