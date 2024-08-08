@@ -22,8 +22,20 @@ func(store *StubPlayerStore)GetPlayerScore(name string)int{
 }
 
 func (s *PlayerServer)ServeHTTP(w http.ResponseWriter, r *http.Request){
-	name:=strings.TrimPrefix(r.URL.Path,"/players/")
-	fmt.Fprint(w,s.Store.GetPlayerScore(name))
+	method:=r.Method
+	switch method{
+	case http.MethodGet:
+		name:=strings.TrimPrefix(r.URL.Path,"/players/")
+		score:=s.Store.GetPlayerScore(name)
+		if score==0{
+		w.WriteHeader(http.StatusNotFound)
+		}
+		fmt.Fprint(w,score)
+	case http.MethodPost:
+		w.WriteHeader(http.StatusAccepted)
+
+	}
+	
 }
 
 func GetPlayerScore(name string) string {
