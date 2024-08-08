@@ -19,7 +19,7 @@ func TestGetPlayer(t *testing.T) {
 	t.Run("Checking the GET for players endpoint",func(t *testing.T){
 		request:=NewGetScoreRequest("Pepper")
 		response:=httptest.NewRecorder()
-		server.ServeHttp(response,request)
+		server.ServeHTTP(response,request)
 		AssertResponseBody(t,response.Body.String(),"20")
 
 	})
@@ -27,7 +27,7 @@ func TestGetPlayer(t *testing.T) {
 		request:=NewGetScoreRequest("Floyd")
 		response := httptest.NewRecorder()
 	
-		server.ServeHttp(response, request)
+		server.ServeHTTP(response, request)
 	
 		AssertResponseBody(t,response.Body.String(),"10")
 	

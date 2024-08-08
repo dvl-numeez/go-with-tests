@@ -10,7 +10,7 @@ type PlayerStore interface{
 	GetPlayerScore(name string)int
 }
 type PlayerServer struct{
-	store PlayerStore
+	Store PlayerStore
 }
 
 type StubPlayerStore struct{
@@ -21,9 +21,9 @@ func(store *StubPlayerStore)GetPlayerScore(name string)int{
 	return store.scores[name]
 }
 
-func (s *PlayerServer)ServeHttp(w http.ResponseWriter, r *http.Request){
+func (s *PlayerServer)ServeHTTP(w http.ResponseWriter, r *http.Request){
 	name:=strings.TrimPrefix(r.URL.Path,"/players/")
-	fmt.Fprint(w,s.store.GetPlayerScore(name))
+	fmt.Fprint(w,s.Store.GetPlayerScore(name))
 }
 
 func GetPlayerScore(name string) string {
