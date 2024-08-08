@@ -29,7 +29,7 @@ type PlayerServer struct{
 
 type StubPlayerStore struct{
 	scores   map[string]int
-	winCalls []string
+	WinCalls []string
 	league   []Player
 }
 
@@ -75,7 +75,7 @@ func(store *StubPlayerStore)GetPlayerScore(name string)int{
 	return store.scores[name]
 }
 func (store *StubPlayerStore)RecordWin(name string){
-	store.winCalls = append(store.winCalls, name)
+	store.WinCalls = append(store.WinCalls, name)
 }
 func NewFileSystemStore(file *os.File)(*FileSystemPlayerStore,error){
 	err := initialisePlayerDBFile(file)
