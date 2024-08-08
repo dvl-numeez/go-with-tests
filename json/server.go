@@ -1,10 +1,15 @@
 package server
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
 )
+type Player struct{
+	Name string
+	Wins int
+}
 
 type PlayerStore interface{
 	GetPlayerScore(name string)int
@@ -12,6 +17,7 @@ type PlayerStore interface{
 }
 type PlayerServer struct{
 	Store PlayerStore
+	http.Handler
 }
 
 type StubPlayerStore struct{
@@ -26,27 +32,43 @@ func (store *StubPlayerStore)RecordWin(name string){
 	store.winCalls = append(store.winCalls, name)
 }
 
-func (s *PlayerServer)ServeHTTP(w http.ResponseWriter, r *http.Request){
-	router:=http.NewServeMux()
-	router.Handle("/league",http.HandlerFunc(func(w http.ResponseWriter, r *http.Request){
-		w.WriteHeader(http.StatusOK)
-	}))
-	router.Handle("/players/",http.HandlerFunc(func(w http.ResponseWriter, r *http.Request){
-		method:=r.Method
-		player := strings.TrimPrefix(r.URL.Path, "/players/")
-		switch method{
-		case http.MethodGet:
-			s.showScore(w,player)
-		case http.MethodPost:
-			s.processWin(w,player)
-			
-	
-		}
-	}))
+func NewPlayerServer(store PlayerStore)*PlayerServer{
+	p := new(PlayerServer)
 
-	router.ServeHTTP(w,r)
+	p.Store = store
+
+	router := http.NewServeMux()
+	router.Handle("/league", http.HandlerFunc(p.leagueHandler))
+	router.Handle("/players/", http.HandlerFunc(p.playersHandler))
+
+	p.Handler = router
+
+	return p
+	
+}
+
+func (s *PlayerServer)ServeHTTP(w http.ResponseWriter, r *http.Request){
+	
+	s.Handler.ServeHTTP(w,r)
 	
 	
+}
+
+func (p *PlayerServer)leagueHandler(w http.ResponseWriter, r *http.Request){
+	json.NewEncoder(w).Encode(p.getLeagueTable())
+	w.WriteHeader(http.StatusOK)
+}
+func (p *PlayerServer)playersHandler(w http.ResponseWriter, r *http.Request){
+	method:=r.Method
+	player := strings.TrimPrefix(r.URL.Path, "/players/")
+	switch method{
+	case http.MethodGet:
+		p.showScore(w,player)
+	case http.MethodPost:
+		p.processWin(w,player)
+		
+
+	}
 }
 func (p *PlayerServer) showScore(w http.ResponseWriter, player string) {
 
@@ -62,6 +84,11 @@ func (p *PlayerServer) showScore(w http.ResponseWriter, player string) {
 func (p *PlayerServer) processWin(w http.ResponseWriter,player string) {
 	p.Store.RecordWin(player)
 	w.WriteHeader(http.StatusAccepted)
+}
+func (p *PlayerServer)getLeagueTable()[]Player{
+	return []Player{
+		{"Chris", 20},
+	}
 }
 
 func GetPlayerScore(name string) string {
