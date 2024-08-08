@@ -46,6 +46,36 @@ func TestLeague(t *testing.T) {
 		got := getLeagueFromResponse(t, response.Body)
 	  	assertStatus(t, response.Code, http.StatusOK)
 	  	assertLeague(t, got, wantedLeague)
+		assertContentType(t, response, jsonContentType)
+	})
+}
+func TestRecordingWinsAndRetrievingThem(t *testing.T) {
+	store := NewInMemoryPlayerStore()
+	server := NewPlayerServer(store)
+	player := "Pepper"
+
+	server.ServeHTTP(httptest.NewRecorder(), NewPostRequest(player))
+	server.ServeHTTP(httptest.NewRecorder(), NewPostRequest(player))
+	server.ServeHTTP(httptest.NewRecorder(),  NewPostRequest(player))
+
+	t.Run("get score", func(t *testing.T) {
+		response := httptest.NewRecorder()
+		server.ServeHTTP(response, NewGetScoreRequest(player))
+		assertStatus(t, response.Code, http.StatusOK)
+
+		AssertResponseBody(t, response.Body.String(), "3")
+	})
+
+	t.Run("get league", func(t *testing.T) {
+		response := httptest.NewRecorder()
+		server.ServeHTTP(response, newLeagueRequest())
+		assertStatus(t, response.Code, http.StatusOK)
+
+		got := getLeagueFromResponse(t, response.Body)
+		want := []Player{
+			{"Pepper", 3},
+		}
+		assertLeague(t, got, want)
 	})
 }
 
@@ -96,4 +126,11 @@ func assertLeague(t testing.TB, got, want []Player) {
 func newLeagueRequest() *http.Request {
 	req, _ := http.NewRequest(http.MethodGet, "/league", nil)
 	return req
+}
+
+func assertContentType(t testing.TB, response *httptest.ResponseRecorder, want string) {
+	t.Helper()
+	if response.Result().Header.Get("content-type") != want {
+		t.Errorf("response did not have content-type of %s, got %v", want, response.Result().Header)
+	}
 }
