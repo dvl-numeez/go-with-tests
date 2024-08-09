@@ -5,17 +5,20 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 	"strings"
 	"time"
+
 )
 
 const PlayerPrompt = "Please enter the number of players: "
-
+const BadInputPrompt = "Enter a number please ........."
 type CLI struct{
 	playerStore PlayerStore
 	in *bufio.Scanner
 	out io.Writer
 	alerter BlindAlerter
+	
 }
 type BlindAlerterFunc func(duration time.Duration, amount int)
 
@@ -47,16 +50,20 @@ func (s *BlindAlert) ScheduleAlertAt(duration time.Duration, amount int) {
 
 func(cli *CLI)PlayPoker(){
 	fmt.Fprint(cli.out,PlayerPrompt)
-	cli.scheduleBlindAlerts()
+	
+	numOfPlayers, _ := strconv.Atoi(cli.readLine())
+
+	cli.scheduleBlindAlerts(numOfPlayers)
 	input := cli.readLine()
 	cli.playerStore.RecordWin(extractWinner(input))
 }
-func(cli *CLI)scheduleBlindAlerts(){
-	blinds := []int{100, 200, 300, 400, 500, 600, 800, 1000, 2000, 4000, 8000}
+func(cli *CLI)scheduleBlindAlerts(num int){
+	blindIncrement := time.Duration(5+num) * time.Minute
 	blindTime := 0 * time.Second
+	blinds := []int{100, 200, 300, 400, 500, 600, 800, 1000, 2000, 4000, 8000}
 	for _,blind:=range blinds{
 		cli.alerter.ScheduleAlertAt(blindTime,blind)
-		blindTime = blindTime+10*time.Minute
+		blindTime = blindTime+blindIncrement
 	}
 }
 func NewCLI(store PlayerStore, in io.Reader,out io.Writer ,alerter BlindAlerter ) *CLI {
