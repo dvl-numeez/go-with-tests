@@ -3,12 +3,14 @@ package websockets
 import (
 	"fmt"
 	"html/template"
+	"io"
 	"net/http"
+	"strconv"
 
 	"github.com/gorilla/websocket"
 )
 
-
+const templatePath = "game.html"
 type PlayerStore interface{
 	GetPlayerScore(name string)int
 	RecordWin(name string)
@@ -16,6 +18,8 @@ type PlayerStore interface{
 type PlayerServer struct {
 	store PlayerStore
 	http.Handler
+	template *template.Template
+	playGame Game
 }
 type StubPlayerStore struct{
 	WinCalls []string
@@ -30,10 +34,15 @@ func(s *StubPlayerStore)RecordWin(name string){
 
 const jsonContentType = "application/json"
 
-func NewPlayerServer(store PlayerStore) *PlayerServer {
+func NewPlayerServer(store PlayerStore,game Game) (*PlayerServer,error) {
 	p := new(PlayerServer)
-
+	tmpl,err:= template.ParseFiles(templatePath)
+	if err !=nil{
+		return nil, fmt.Errorf("problem opening %s %v", templatePath, err)
+	}
 	p.store = store
+	p.template = tmpl
+	p.playGame = game
 
 	router := http.NewServeMux()
 	router.Handle("/league", http.HandlerFunc(p.leagueHandler))
@@ -43,7 +52,7 @@ func NewPlayerServer(store PlayerStore) *PlayerServer {
 
 	p.Handler = router
 
-	return p
+	return p,nil
 }
 
 
@@ -57,21 +66,19 @@ func(p *PlayerServer)playersHandler(w http.ResponseWriter,r *http.Request){
 }
 
 func(p *PlayerServer)game(w http.ResponseWriter,r *http.Request){
-	tmpl,err:=template.ParseFiles("game.html")
-	if err!=nil{
-		http.Error(w, fmt.Sprintf("problem loading template %s", err.Error()), http.StatusInternalServerError)
-		return
-	}
-	tmpl.Execute(w,tmpl)
+	p.template.Execute(w,nil)
+}
+var wsUpgrader = websocket.Upgrader{
+	ReadBufferSize:  1024,
+	WriteBufferSize: 1024,
 }
 
 func(p *PlayerServer)webSocket(w http.ResponseWriter, r *http.Request){
-	upgrader:= websocket.Upgrader{
-		ReadBufferSize: 1024,
-		WriteBufferSize: 1024,
-	}
-	conn,_:=upgrader.Upgrade(w,r,nil)
+	conn,_:=wsUpgrader.Upgrade(w,r,nil)
+	_, numberOfPlayersMsg, _ := conn.ReadMessage()
+	numberOfPlayers, _ := strconv.Atoi(string(numberOfPlayersMsg))
+	p.playGame.Start(numberOfPlayers,io.Discard)
 	_,winnerMsg,_:=conn.ReadMessage()
-	p.store.RecordWin(string(winnerMsg))
+	p.playGame.Finish(string(winnerMsg))
 
 }
