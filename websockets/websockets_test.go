@@ -57,9 +57,11 @@ func TestGame(t *testing.T) {
 
 	})
 	t.Run("start a game with 3 players and declare Ruth the winner", func(t *testing.T) {
-		game := &GameSpy{}
+		const tenMs =  10*time.Millisecond
+		wantedBlindAlert:="Blind is 100"
+		game := &GameSpy{BlindAlert: []byte(wantedBlindAlert)}
 		dummyPlayerStore:=&poker.StubPlayerStore{}
-		winner := "Ruth"
+		winner := "Numeez"
 		server := httptest.NewServer(mustMakePlayerServer(t, dummyPlayerStore, game))
 		ws := mustDialWS(t, "ws"+strings.TrimPrefix(server.URL, "http")+"/ws")
 	
@@ -69,9 +71,10 @@ func TestGame(t *testing.T) {
 		writeWSMessage(t, ws, "3")
 		writeWSMessage(t, ws, winner)
 	
-		time.Sleep(10 * time.Millisecond)
+		time.Sleep(tenMs)
 		assertGameStartedWith(t, game, 3)
 		assertFinishCalledWith(t, game, winner)
+		within(t, tenMs, func() { assertWebsocketGotMsg(t, ws, wantedBlindAlert) })
 	})
 }
 
@@ -144,8 +147,43 @@ func assertGameStartedWith(t testing.TB,game *GameSpy,num int){
 
 func assertFinishCalledWith(t testing.TB,game *GameSpy,name string){
 	t.Helper()
+	passed := retryUntil(500*time.Millisecond, func() bool {
+		return game.FinishedWith== name
+	})
+	
+	if !passed {
+		t.Errorf("expected finish called with %q but got %q", name, game.FinishedWith)
+	}
+}
+func retryUntil(d time.Duration,f func()bool)bool{
+	deadline := time.Now().Add(d)
+	for time.Now().Before(deadline) {
+		if f() {
+			return true
+		}
+	}
+	return false
+}
+func within(t testing.TB, d time.Duration, assert func()) {
+	t.Helper()
 
-	if game.FinishedWith!=name{
-		t.Errorf("Actual : %s Expected : %s",game.FinishedWith,name)
+	done := make(chan struct{}, 1)
+
+	go func() {
+		assert()
+		done <- struct{}{}
+	}()
+
+	select {
+	case <-time.After(d):
+		t.Error("timed out")
+	case <-done:
+	}
+}
+
+func assertWebsocketGotMsg(t *testing.T, ws *websocket.Conn, want string) {
+	_, msg, _ := ws.ReadMessage()
+	if string(msg) != want {
+		t.Errorf(`got "%s", want "%s"`, string(msg), want)
 	}
 }
